@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ShopCalc</string>
+    <string name="delete_item">Delete item</string>
+    <string name="add_item">Add item</string>
+    <string name="total_budget_0_00">Total Budget: $0.00</string>
+    <string name="actually_spent_0_00">Actually Spent: $0.00</string>
+</resources>
