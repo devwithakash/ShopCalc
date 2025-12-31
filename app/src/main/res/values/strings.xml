@@ -4,4 +4,12 @@
     <string name="add_item">Add item</string>
     <string name="total_budget_0_00">Total Budget: $0.00</string>
     <string name="actually_spent_0_00">Actually Spent: $0.00</string>
+    <string name="total_budget_format">Total Budget: %1$s%2$.2f</string>
+    <string name="actually_spent_format">Actually Spent: %1$s%2$.2f</string>
+    <string name="budget_limit_format">Limit: %1$s%2$.2f</string>
+    <string name="set_budget_limit">Set Budget Limit</string>
+    <string name="select_currency">Select Currency</string>
+    <string name="over_budget_warning">Warning: Over Budget!</string>
+    <string name="set_limit">Set Limit</string>
+    <string name="settings">Settings</string>
 </resources>

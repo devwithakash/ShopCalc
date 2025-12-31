@@ -3,14 +3,15 @@ package com.smartlist.budgetcalc
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.Spinner
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.smartlist.budgetcalc.databinding.ActivityMainBinding
-import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,6 +19,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var shopAdapter: ShopAdapter
     private var shopItems = mutableListOf<ShopItem>()
     private val gson = Gson()
+
+    private var currencySymbol = "$"
+    private var budgetLimit = 0.0
     private val prefs by lazy { getSharedPreferences("shop_prefs", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,11 +37,17 @@ class MainActivity : AppCompatActivity() {
         binding.fab.setOnClickListener {
             showAddItemDialog()
         }
+
+        // [FIX] Hooking up the Settings Button
+        binding.buttonSettings.setOnClickListener {
+            showSettingsDialog()
+        }
     }
 
     private fun setupRecyclerView() {
         shopAdapter = ShopAdapter(
             items = shopItems,
+            currencySymbol = currencySymbol, // [FIX] Passing currency here
             onEdit = { item -> showEditItemDialog(item) },
             onDelete = { item ->
                 shopItems.remove(item)
@@ -58,7 +68,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddItemDialog() {
-        val builder = AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+        val builder = AlertDialog.Builder(this)
         builder.setTitle("Add New Item")
 
         val view = layoutInflater.inflate(R.layout.dialog_add_item, null)
@@ -84,7 +94,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showEditItemDialog(item: ShopItem) {
-        val builder = AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+        val builder = AlertDialog.Builder(this)
         builder.setTitle("Edit Item")
 
         val view = layoutInflater.inflate(R.layout.dialog_add_item, null)
@@ -117,8 +127,21 @@ class MainActivity : AppCompatActivity() {
         val totalBudget = shopItems.sumOf { it.price }
         val actualSpent = shopItems.filter { it.isBought }.sumOf { it.price }
 
-        binding.textViewTotalBudget.text = String.format("Total Budget: $%.2f", totalBudget)
-        binding.textViewActualSpent.text = String.format("Actually Spent: $%.2f", actualSpent)
+        binding.textViewTotalBudget.text = getString(R.string.total_budget_format, currencySymbol, totalBudget)
+        binding.textViewActualSpent.text = getString(R.string.actually_spent_format, currencySymbol, actualSpent)
+
+        if (budgetLimit > 0) {
+            binding.textViewBudgetLimit.visibility = View.VISIBLE
+            binding.textViewBudgetLimit.text = getString(R.string.budget_limit_format, currencySymbol, budgetLimit)
+
+            if (totalBudget > budgetLimit) {
+                binding.textViewTotalBudget.setTextColor(getColor(android.R.color.holo_red_dark))
+            } else {
+                binding.textViewTotalBudget.setTextColor(getColor(android.R.color.black))
+            }
+        } else {
+            binding.textViewBudgetLimit.visibility = View.GONE
+        }
     }
 
     private fun saveData() {
@@ -130,6 +153,9 @@ class MainActivity : AppCompatActivity() {
         val json = prefs.getString("shop_items", null)
         val type = object : TypeToken<MutableList<ShopItem>>() {}.type
         shopItems = gson.fromJson(json, type) ?: mutableListOf()
+
+        currencySymbol = prefs.getString("currency_symbol", "$") ?: "$"
+        budgetLimit = prefs.getFloat("budget_limit", 0.0f).toDouble()
     }
 
     private fun updateEmptyStateVisibility() {
@@ -140,5 +166,43 @@ class MainActivity : AppCompatActivity() {
             binding.textViewEmptyState.visibility = View.GONE
             binding.recyclerView.visibility = View.VISIBLE
         }
+    }
+
+    private fun showSettingsDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("App Settings")
+
+        val view = layoutInflater.inflate(R.layout.dialog_settings, null)
+        // [FIX] These IDs now exist in the new layout
+        val limitET = view.findViewById<EditText>(R.id.editTextLimit)
+        val currencySpinner = view.findViewById<Spinner>(R.id.spinnerCurrency)
+
+        limitET.setText(budgetLimit.toString())
+
+        // Select the current currency in the spinner
+        val currencyOptions = resources.getStringArray(R.array.currency_options)
+        val index = currencyOptions.indexOf(currencySymbol)
+        if (index >= 0) {
+            currencySpinner.setSelection(index)
+        }
+
+        builder.setView(view)
+        builder.setPositiveButton("Save") { _, _ ->
+            budgetLimit = limitET.text.toString().toDoubleOrNull() ?: 0.0
+            currencySymbol = currencySpinner.selectedItem.toString()
+
+            prefs.edit().apply {
+                putFloat("budget_limit", budgetLimit.toFloat())
+                putString("currency_symbol", currencySymbol)
+                apply()
+            }
+
+            // [FIX] Update adapter's currency property
+            shopAdapter.currencySymbol = currencySymbol
+
+            updateTotals()
+            shopAdapter.notifyDataSetChanged()
+        }
+        builder.show()
     }
 }
