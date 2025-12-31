@@ -8,6 +8,7 @@ import com.smartlist.budgetcalc.databinding.ItemShopBinding
 
 class ShopAdapter(
     private var items: MutableList<ShopItem>,
+    var currencySymbol: String, // [FIX] Added this variable
     private val onEdit: (ShopItem) -> Unit,
     private val onDelete: (ShopItem) -> Unit,
     private val onBoughtToggle: (ShopItem) -> Unit
@@ -25,16 +26,13 @@ class ShopAdapter(
 
     override fun getItemCount(): Int = items.size
 
-    fun updateList(newList: List<ShopItem>) {
-        items.clear()
-        items.addAll(newList)
-        notifyDataSetChanged()
-    }
-
     inner class ShopViewHolder(private val binding: ItemShopBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ShopItem) {
             binding.textViewName.text = item.name
-            binding.textViewPrice.text = String.format("$%.2f", item.price)
+
+            // [FIX] Using the class property 'currencySymbol'
+            binding.textViewPrice.text = String.format("%s%.2f", currencySymbol, item.price)
+
             binding.checkBoxBought.isChecked = item.isBought
 
             updateStrikeThrough(item.isBought)
